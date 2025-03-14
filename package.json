@@ -1,41 +1,89 @@
 {
-  "name": "lemonsqueezy-visualcode-blueprint",
-  "displayName": "lemonsqueezy visualcode blueprint",
-  "description": "",
-  "version": "0.0.1",
+  "name": "lemonsqueezy-extension",
+  "displayName": "Text Tools Pro",
+  "description": "Text manipulation tools with premium features",
+  "version": "1.0.0",
+  "publisher": "YourPublisherName",
+  "license": "MIT",
   "engines": {
-    "vscode": "^1.98.0"
+    "vscode": "^1.60.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
-  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "lemonsqueezy-visualcode-blueprint.helloWorld",
-        "title": "Hello World"
+        "command": "textToolsPro.showToolbar",
+        "title": "Show Text Tools Pro",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "textToolsPro.characterCount",
+        "title": "Count Characters"
+      },
+      {
+        "command": "textToolsPro.wordCount",
+        "title": "Count Words"
+      },
+      {
+        "command": "textToolsPro.toUpperCase",
+        "title": "Convert to Uppercase"
+      },
+      {
+        "command": "textToolsPro.toLowerCase",
+        "title": "Convert to Lowercase"
+      },
+      {
+        "command": "textToolsPro.base64Encode",
+        "title": "Base64 Encode"
+      },
+      {
+        "command": "textToolsPro.base64Decode",
+        "title": "Base64 Decode"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "text-tools-pro",
+          "title": "Text Tools Pro",
+          "icon": "$(star)"
+        }
+      ]
+    },
+    "views": {
+      "text-tools-pro": [
+        {
+          "type": "webview",
+          "id": "textToolsProSidebar",
+          "name": "Text Tools Pro",
+          "icon": "$(star)"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src",
-    "test": "vscode-test"
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.36",
+    "axios": "^1.4.0",
+    "uuid": "^9.0.0",
+    "dayjs": "^1.11.9"
   },
   "devDependencies": {
-    "@types/vscode": "^1.98.0",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
-    "@typescript-eslint/eslint-plugin": "^8.25.0",
-    "@typescript-eslint/parser": "^8.25.0",
-    "eslint": "^9.21.0",
-    "typescript": "^5.7.3",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
+    "@types/vscode": "^1.60.0",
+    "@types/node": "^16.11.7",
+    "typescript": "^4.5.5"
   }
 }
