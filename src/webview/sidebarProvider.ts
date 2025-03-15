@@ -99,7 +99,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Text Tools Pro</title>
                 <style>
-                    body { padding: 15px; }
+                    body { padding: 5px 15px 15px 15px; }
                     .feature-button { 
                         width: 100%;
                         margin: 5px 0;
@@ -111,7 +111,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         border: 1px solid #ccc;
                     }
                     .license-section {
+                    margin-top: 0px;
                         margin-bottom: 20px;
+                    }
+                    .license-section>h3 {
+                        margin-top: 0px;
+                        margin-bottom: 5px;
                     }
                     .status-section {
                         position: fixed;
@@ -119,11 +124,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         left: 0;
                         right: 0;
                         padding: 10px;
+                        margin-top: 0;
                         background: var(--vscode-editor-background);
                         border-top: 1px solid var(--vscode-widget-border);
                     }
                     .loading { opacity: 0.5; pointer-events: none; }
                     .license-info { margin: 10px 0; padding: 10px; background: var(--vscode-editor-background); }
+                    .license-info>h4 { margin: 0px 0px; }
                     .error { color: var(--vscode-errorForeground); margin: 5px 0; }
                     .offline-warning {
                         background: var(--vscode-errorBackground);
@@ -133,6 +140,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         border-radius: 4px;
                         text-align: center;
                     }
+                    div#licenseDetails>p {
+                        margin: 5px 0px;
+                    }
+                    button#deactivateBtn {
+                        padding: 5px;
+                        margin-top: 10px;
+                    }
+                   .freefh,.premiumfh {
+                        margin: 5px;
+                    }     
                 </style>
             </head>
             <body>
@@ -156,7 +173,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 </div>
 
                 <div class="feature-section">
-                    <h3>Free Features</h3>
+                    <h3 class="freefh">Free Features</h3>
                     <button class="feature-button" onclick="executeFeature('characterCount')">
                         Character Count
                     </button>
@@ -166,7 +183,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 </div>
 
                 <div class="feature-section">
-                    <h3>Premium Features</h3>
+                    <h3 class="premiumfh">Premium Features</h3>
                     <button class="feature-button premium" onclick="executeFeature('toUpperCase')">
                         Convert to Uppercase
                     </button>
@@ -308,8 +325,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                 <p>Customer Email: \${licenseInfo.customerEmail || 'N/A'}</p>
                                 <p>License Key: \${licenseInfo.licenseKey || 'N/A'}</p>
                                 <p>Instance Name: \${licenseInfo.instanceName || 'N/A'}</p>
-                                <p>Created At: \${new Date(licenseInfo.createdAt).toLocaleDateString() || 'N/A'}</p>
                                 <p>Activation Usage: \${licenseInfo.activationUsage || 0} / \${licenseInfo.activationLimit || 'Unlimited'}</p>
+                                <p>Created At: \${new Date(licenseInfo.createdAt).toLocaleDateString() || 'N/A'}</p>
                                 <p>Expires: \${licenseInfo.expiresAt ? new Date(licenseInfo.expiresAt).toLocaleDateString() : 'Never'}</p>
                             \`;
                         }
