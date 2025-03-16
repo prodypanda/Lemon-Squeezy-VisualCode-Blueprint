@@ -307,9 +307,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             statusElement.textContent = \`License Status: \${licenseInfo.status || 'Active'}\`;
                             document.querySelectorAll('.premium').forEach(btn => btn.disabled = false);
                         } else {
-                            statusElement.textContent = licenseInfo.temporarilyDisabled ? 
-                                'License Status: Temporarily Disabled' : 
-                                'License Status: Invalid';
+                            // Handle expired status specifically
+                            if(licenseInfo.status === 'expired'){
+                                statusElement.textContent = 'License Status: Expired';
+                            } else if(licenseInfo.temporarilyDisabled){
+                                statusElement.textContent = 'License Status: Temporarily Disabled';
+                            }
+                            else{
+                                statusElement.textContent = 'License Status: Invalid';
+                            }
                             document.querySelectorAll('.premium').forEach(btn => btn.disabled = true);
                         }
 
@@ -329,6 +335,23 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                 <p>Created At: \${new Date(licenseInfo.createdAt).toLocaleDateString() || 'N/A'}</p>
                                 <p>Expires: \${licenseInfo.expiresAt ? new Date(licenseInfo.expiresAt).toLocaleDateString() : 'Never'}</p>
                             \`;
+                        }
+                        // Display expiration details if expired
+                        else if (licenseInfo.status === 'expired') {
+                            licenseDetails.innerHTML = \`
+                            <p>Status: Expired</p>
+                            <p>Product Name: \${licenseInfo.productName || 'N/A'}</p>
+                            <p>Customer Name: \${licenseInfo.customerName || 'N/A'}</p>
+                            <p>Customer Email: \${licenseInfo.customerEmail || 'N/A'}</p>
+                            <p>License Key: \${licenseInfo.licenseKey || 'N/A'}</p>
+                            <p>Instance Name: \${licenseInfo.instanceName || 'N/A'}</p>
+                            <p>Activation Usage: \${licenseInfo.activationUsage || 0} / \${licenseInfo.activationLimit || 'Unlimited'}</p>
+                            <p>Created At: \${new Date(licenseInfo.createdAt).toLocaleDateString() || 'N/A'}</p>
+                            <p>Expired At: \${licenseInfo.expiresAt ? new Date(licenseInfo.expiresAt).toLocaleDateString() : 'Never'}</p>
+                            <p>Please renew your license.</p>
+                        \`;
+
+                        licenseInfoDiv.style.display = 'block'; // Show the license info even if it's expired
                         }
                     }
 
