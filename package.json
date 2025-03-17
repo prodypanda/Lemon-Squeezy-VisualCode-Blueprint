@@ -1,9 +1,9 @@
 {
   "name": "lemonsqueezy-extension",
-  "displayName": "Text Tools Pro",
-  "description": "Text manipulation tools with premium features",
+  "displayName": "Lemon Squeezy Blueprint for VS Code",
+  "description": "A simple extension that makes it easy to use the Lemon Squeezy API in VS Code, sell your VS Code extension.",
   "version": "1.0.0",
-  "publisher": "YourPublisherName",
+  "publisher": "prodypanda",
   "license": "MIT",
   "engines": {
     "vscode": "^1.60.0"
