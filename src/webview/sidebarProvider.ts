@@ -117,7 +117,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 <!-- KEY CHANGE: Add CSP meta tag -->
 
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Text Tools Pro</title>
+                <title>Lemon Squeezy Blueprint for VS Code</title>
                 <style>
                     body { padding: 5px 15px 15px 15px; }
                     .feature-button { 

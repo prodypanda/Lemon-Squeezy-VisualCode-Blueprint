@@ -19,7 +19,7 @@
     "commands": [
       {
         "command": "textToolsPro.showToolbar",
-        "title": "Show Text Tools Pro",
+        "title": "Show Lemon Squeezy Blueprint for VS Code",
         "icon": "$(tools)"
       },
       {
@@ -51,7 +51,7 @@
       "activitybar": [
         {
           "id": "text-tools-pro",
-          "title": "Text Tools Pro",
+          "title": "Lemon Squeezy Blueprint for VS Code",
           "icon": "$(star)"
         }
       ]
@@ -61,7 +61,7 @@
         {
           "type": "webview",
           "id": "textToolsProSidebar",
-          "name": "Text Tools Pro",
+          "name": "Lemon Squeezy Blueprint for VS Code",
           "icon": "$(star)"
         }
       ]
