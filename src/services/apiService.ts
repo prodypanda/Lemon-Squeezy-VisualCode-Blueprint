@@ -1,13 +1,12 @@
-// File: src/services/apiService.ts
-
-import axios from 'axios';
+// src/services/apiService.ts
+import axios, { AxiosError } from 'axios';
 import { CONFIG } from '../config';
 import { LicenseResponse } from '../types';
 
 export class ApiService {
     private static headers = {
         'Accept': 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/x-www-form-urlencoded',
     };
 
     public static async ping(): Promise<boolean> {
@@ -20,63 +19,31 @@ export class ApiService {
     }
 
     public static async activateLicense(licenseKey: string, instanceName: string): Promise<LicenseResponse> {
-        try {
-            const response = await axios.post(
-                CONFIG.API_ENDPOINTS.ACTIVATE,
-                { license_key: licenseKey, instance_name: instanceName },
-                { headers: this.headers }
-            );
-            return response.data;
-        } catch (error) {
-            // --- KEY CHANGE: Return API error message for 400/404 ---
-            if (axios.isAxiosError(error) && error.response &&
-                (error.response.status === 400 || error.response.status === 404)) {
-                return error.response.data as LicenseResponse; // Return API response
-            } else {
-                throw error; // Re-throw other errors
-            }
-            // --- END KEY CHANGE ---
-        }
+        return this.postRequest(CONFIG.API_ENDPOINTS.ACTIVATE, { license_key: licenseKey, instance_name: instanceName });
     }
 
     public static async validateLicense(licenseKey: string, instanceId: string): Promise<LicenseResponse> {
-        try {
-            const response = await axios.post(
-                CONFIG.API_ENDPOINTS.VALIDATE,
-                { license_key: licenseKey, instance_id: instanceId },
-                { headers: this.headers }
-            );
-            return response.data;
-
-        } catch (error) {
-            // Handle 400 AND 404 Errors - return the response data
-            if (axios.isAxiosError(error) && error.response &&
-                (error.response.status === 400 || error.response.status === 404)) {
-                return error.response.data as LicenseResponse;
-            } else {
-                throw error; // Re-throw other errors
-            }
-        }
+        return this.postRequest(CONFIG.API_ENDPOINTS.VALIDATE, { license_key: licenseKey, instance_id: instanceId });
     }
 
     public static async deactivateLicense(licenseKey: string, instanceId: string): Promise<LicenseResponse> {
+        return this.postRequest(CONFIG.API_ENDPOINTS.DEACTIVATE, { license_key: licenseKey, instance_id: instanceId });
+    }
+
+    private static async postRequest(url: string, data: any): Promise<LicenseResponse> {
         try {
-            const response = await axios.post(
-                CONFIG.API_ENDPOINTS.DEACTIVATE,
-                { license_key: licenseKey, instance_id: instanceId },
-                { headers: this.headers }
-            );
-            return response.data;
+            const response = await axios.post(url, data, { headers: this.headers });
+            return response.data; // Return data directly on success
         } catch (error) {
-            throw this.handleApiError(error);
+            this.handleApiError(error); // handleApiError now always throws
+            throw error; // need this line to make the compiler happy and stop error.
         }
     }
 
-    private static handleApiError(error: any): Error {
-        if (axios.isAxiosError(error)) {
-            // --- KEY CHANGE: Re-throw the original Axios error ---
-            throw error; //  Re-throw the original Axios error.
+    private static handleApiError(error: any): never { // Return type is 'never'
+        if (axios.isAxiosError(error) && error.response && (error.response.status === 400 || error.response.status === 404)) {
+            throw error.response.data;  // Throw the API response data as the error
         }
-        return new Error('Unknown API error occurred');
+        throw error; // Re-throw other errors
     }
 }

@@ -1,25 +1,15 @@
+// src/features/freeFeatures.ts
 import * as vscode from 'vscode';
 
 export class FreeFeatures {
-    /**
-     * Counts the number of characters in the active editor
-     */
     public static getCharacterCount(): number {
         const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            return 0;
-        }
-        return editor.document.getText().length;
+        return editor ? editor.document.getText().length : 0;
     }
 
-    /**
-     * Counts the number of words in the active editor
-     */
     public static getWordCount(): number {
         const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            return 0;
-        }
+        if (!editor) return 0;
         const text = editor.document.getText();
         return text.split(/\s+/).filter(word => word.length > 0).length;
     }

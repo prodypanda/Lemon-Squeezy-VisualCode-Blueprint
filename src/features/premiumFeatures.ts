@@ -1,90 +1,35 @@
+// src/features/premiumFeatures.ts
 import * as vscode from 'vscode';
 
 export class PremiumFeatures {
-    /**
-     * Converts text to uppercase
-     */
-    public static convertToUpperCase(): void {
+    private static async applyTextTransformation(transform: (text: string) => string): Promise<void> {
         const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            return;
-        }
+        if (!editor) return;
 
         const document = editor.document;
         const text = document.getText();
+        const range = new vscode.Range(document.positionAt(0), document.positionAt(text.length));
 
-        editor.edit(editBuilder => {
-            const range = new vscode.Range(
-                document.positionAt(0),
-                document.positionAt(text.length)
-            );
-            editBuilder.replace(range, text.toUpperCase());
+        await editor.edit(editBuilder => {
+            editBuilder.replace(range, transform(text));
         });
     }
 
-    /**
-     * Converts text to lowercase
-     */
-    public static convertToLowerCase(): void {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            return;
-        }
-
-        const document = editor.document;
-        const text = document.getText();
-
-        editor.edit(editBuilder => {
-            const range = new vscode.Range(
-                document.positionAt(0),
-                document.positionAt(text.length)
-            );
-            editBuilder.replace(range, text.toLowerCase());
-        });
+    public static async convertToUpperCase(): Promise<void> {
+        await this.applyTextTransformation(text => text.toUpperCase());
     }
 
-    /**
-     * Encodes text to base64
-     */
-    public static base64Encode(): void {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            return;
-        }
-
-        const document = editor.document;
-        const text = document.getText();
-
-        editor.edit(editBuilder => {
-            const range = new vscode.Range(
-                document.positionAt(0),
-                document.positionAt(text.length)
-            );
-            editBuilder.replace(range, Buffer.from(text).toString('base64'));
-        });
+    public static async convertToLowerCase(): Promise<void> {
+        await this.applyTextTransformation(text => text.toLowerCase());
     }
 
-    /**
-     * Decodes text from base64
-     */
-    public static base64Decode(): void {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            return;
-        }
+    public static async base64Encode(): Promise<void> {
+        await this.applyTextTransformation(text => Buffer.from(text).toString('base64'));
+    }
 
-        const document = editor.document;
-        const text = document.getText();
-
+    public static async base64Decode(): Promise<void> {
         try {
-            const decoded = Buffer.from(text, 'base64').toString('utf-8');
-            editor.edit(editBuilder => {
-                const range = new vscode.Range(
-                    document.positionAt(0),
-                    document.positionAt(text.length)
-                );
-                editBuilder.replace(range, decoded);
-            });
+            await this.applyTextTransformation(text => Buffer.from(text, 'base64').toString('utf-8'));
         } catch (error) {
             vscode.window.showErrorMessage('Invalid base64 string');
         }

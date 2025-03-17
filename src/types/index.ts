@@ -1,6 +1,6 @@
+// src/types/index.ts
 export interface LicenseResponse {
     activated?: boolean;
-    deactivated?: boolean;
     valid?: boolean;
     error: string | null;
     license_key: {
@@ -41,4 +41,20 @@ export interface FeatureResult {
     success: boolean;
     message: string;
     data?: any;
+}
+export interface LicenseInfo {
+    valid: boolean;
+    licenseKey: string;
+    instanceId: string;
+    instanceName?: string;
+    status: 'active' | 'inactive' | 'expired' | 'disabled';
+    expiresAt?: string | null;
+    activationLimit?: number;
+    activationUsage?: number;
+    temporarilyDisabled?: boolean;
+    expired?: boolean;
+    createdAt?: string;
+    productName?: string;
+    customerName?: string;
+    customerEmail?: string;
 }
