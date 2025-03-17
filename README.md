@@ -1,4 +1,3 @@
-```markdown
 # Lemon Squeezy Blueprint for VS Code
 
 This VS Code extension provides a blueprint for integrating Lemon Squeezy licensing into your own VS Code extensions. It demonstrates how to:
