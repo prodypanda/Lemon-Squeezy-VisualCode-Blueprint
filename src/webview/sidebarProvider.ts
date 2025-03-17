@@ -1,26 +1,23 @@
-// File: src/webview/sidebarProvider.ts
+// src/webview/sidebarProvider.ts
 import * as vscode from 'vscode';
-import { FreeFeatures } from '../features/freeFeatures';
-import { PremiumFeatures } from '../features/premiumFeatures';
 import { LicenseService } from '../services/licenseService';
 import { FeatureManager } from '../features/featureManager';
-import { LicenseInfo } from '../config';
+import { LicenseInfo } from './../types/index';
+import { Validators } from '../utils/validators';
+
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
-    private licenseService: LicenseService;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
-        licenseService: LicenseService
+        private licenseService: LicenseService
     ) {
-        this.licenseService = licenseService;
         this.licenseService.onOnlineStatusChange((isOnline, licenseInfo) => {
-
             this._view?.webview.postMessage({
                 type: 'onlineStatus',
                 value: isOnline,
-                licenseInfo: licenseInfo
+                licenseInfo: licenseInfo,
             });
         });
     }
@@ -31,96 +28,78 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         _token: vscode.CancellationToken,
     ) {
         this._view = webviewView;
+
         webviewView.webview.options = {
             enableScripts: true,
-            localResourceRoots: [this._extensionUri]
+            localResourceRoots: [this._extensionUri],
         };
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-        // --- KEY CHANGE: Initial Status Update ---
-        webviewView.webview.postMessage({
-            type: 'initialStatus',
-            value: { isOnline: false, licenseInfo: null } // Send initial state
-        });
-        // --- END KEY CHANGE ---
-
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.type) {
                 case 'activateLicense':
-                    try {
-                        const licenseInfo = await this.licenseService.activateLicense(data.value);
-                        webviewView.webview.postMessage({ type: 'licenseStatus', value: licenseInfo });
-                    } catch (error) {
-                        // --- KEY CHANGE: Display User-Friendly Error ---
-                        let errorMessage = 'An unknown error occurred during activation.';
-                        if (error instanceof Error) {
-                            errorMessage = error.message;
-                        }
-                        webviewView.webview.postMessage({ type: 'error', value: errorMessage });
-                        // --- END KEY CHANGE ---
-                    }
+                    await this.handleActivateLicense(data.value);
                     break;
-
                 case 'deactivateLicense':
-                    try {
-                        await this.licenseService.deactivateLicense();
-                        webviewView.webview.postMessage({
-                            type: 'licenseStatus',
-                            value: { valid: false }
-                        });
-                    } catch (error) {
-                        // --- KEY CHANGE: Display User-Friendly Error ---
-                        let errorMessage = 'An unknown error occurred during deactivation.';
-                        if (error instanceof Error) {
-                            errorMessage = error.message;
-                        }
-                        webviewView.webview.postMessage({ type: 'error', value: errorMessage });
-                        // --- END KEY CHANGE ---
-                    }
+                    await this.handleDeactivateLicense();
                     break;
-
                 case 'executeFeature':
-                    try {
-                        await this._executeFeature(data.feature);
-                    } catch (error) {
-                        // --- KEY CHANGE: Display User-Friendly Error ---
-                        let errorMessage = 'An unknown error occurred.';
-                        if (error instanceof Error) {
-                            errorMessage = error.message;
-                        }
-                        webviewView.webview.postMessage({ type: 'error', value: errorMessage });
-                        // --- END KEY CHANGE ---
-                    }
+                    await this.handleExecuteFeature(data.feature);
                     break;
             }
         });
     }
-    private async _executeFeature(feature: string) {
-        const isPremiumEnabled = await this.licenseService.isPremiumEnabled();
-        const result = await FeatureManager.executeFeature(feature, isPremiumEnabled);
 
-        this._view?.webview.postMessage({
-            type: result.success ? 'featureResult' : 'featureError',
-            feature: feature,
-            result: result.message
-        });
+    private async handleActivateLicense(licenseKey: string) {
+        if (!Validators.isValidLicenseKey(licenseKey)) {
+            this.postWebviewMessage('error', 'Invalid license key format.');
+            return;
+        }
+
+        try {
+            const licenseInfo = await this.licenseService.activateLicense(licenseKey);
+            this.postWebviewMessage('licenseStatus', licenseInfo);
+        } catch (error) {
+            this.postWebviewMessage('error', error instanceof Error ? error.message : 'An unknown error occurred.');
+        }
+    }
+
+    private async handleDeactivateLicense() {
+        try {
+            await this.licenseService.deactivateLicense();
+            this.postWebviewMessage('licenseStatus', { valid: false }); // Immediately reflect deactivation
+        } catch (error) {
+            this.postWebviewMessage('error', error instanceof Error ? error.message : 'An unknown error occurred.');
+        }
+    }
+
+    private async handleExecuteFeature(feature: string) {
+        try {
+            const isPremiumEnabled = await this.licenseService.isPremiumEnabled();
+            const result = await FeatureManager.executeFeature(feature, isPremiumEnabled);
+            this.postWebviewMessage(result.success ? 'featureResult' : 'featureError', result.message, feature);
+        } catch (error) {
+            this.postWebviewMessage('error', error instanceof Error ? error.message : 'An unknown error occurred.');
+        }
+    }
+
+    private postWebviewMessage(type: string, value: any, feature?: string) {
+        this._view?.webview.postMessage({ type, value, feature });
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
-
+        // The HTML content remains largely the same, but benefits from the cleaner message handling
         return `
             <!DOCTYPE html>
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
-                <!-- KEY CHANGE: Add CSP meta tag -->
-
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Lemon Squeezy Blueprint for VS Code</title>
-                <style>
+                 <style>
                     body { padding: 5px 15px 15px 15px; }
-                    .feature-button { 
+                    .feature-button {
                         width: 100%;
                         margin: 5px 0;
                         padding: 8px;
@@ -169,11 +148,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
                    .freefh,.premiumfh {
                         margin: 5px;
-                    }     
+                    }
                 </style>
             </head>
             <body>
-                <div id="offlineWarning" class="offline-warning" style="display: none">
+                 <div id="offlineWarning" class="offline-warning" style="display: none">
                     Premium features are temporarily disabled due to offline duration limit.
                 </div>
                 <!-- NEW: Expired Warning -->
@@ -229,7 +208,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
                 <script>
                     const vscode = acquireVsCodeApi();
-                    let licenseState = { valid: false, temporarilyDisabled: false, expired: false }; // NEW: Include expired
+                    let licenseState = { valid: false, temporarilyDisabled: false, expired: false };
                     let isOnline = false;
 
                     const premiumFeatures = [
@@ -238,8 +217,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         'base64Encode',
                         'base64Decode'
                     ];
-
-                    // --- KEY CHANGE: License Key Validation ---
                     function isValidLicenseKey(key) {
                         const pattern = /^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}$/i;
                         return pattern.test(key);
@@ -249,30 +226,23 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         setLoading(true);
                         clearError();
                         const licenseKey = document.getElementById('licenseKey').value;
-                        // Validate the license key format
                         if (!isValidLicenseKey(licenseKey)) {
                             showError('Invalid license key format.');
-                            setLoading(false); // Stop loading
-                            return; // Exit the function
+                            setLoading(false);
+                            return;
                         }
 
-                        vscode.postMessage({
-                            type: 'activateLicense',
-                            value: licenseKey
-                        });
+                        vscode.postMessage({ type: 'activateLicense', value: licenseKey });
                     }
 
                     function deactivateLicense() {
                         setLoading(true);
                         clearError();
-                        vscode.postMessage({
-                            type: 'deactivateLicense'
-                        });
+                        vscode.postMessage({ type: 'deactivateLicense' });
                     }
 
-                   function executeFeature(feature) {
+                    function executeFeature(feature) {
                         if (premiumFeatures.includes(feature)) {
-                            // NEW: Check for expired
                             if (!licenseState.valid || licenseState.temporarilyDisabled || licenseState.expired) {
                                 showError(
                                     licenseState.temporarilyDisabled
@@ -284,41 +254,27 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         }
 
                         clearError();
-                        vscode.postMessage({
-                            type: 'executeFeature',
-                            feature: feature
-                        });
+                        vscode.postMessage({ type: 'executeFeature', feature: feature });
                     }
-
 
                     window.addEventListener('message', event => {
                         const message = event.data;
                         switch (message.type) {
                             case 'onlineStatus':
                                 updateOnlineStatus(message.value);
-
-                                // --- KEY CHANGE: Handle null licenseInfo ---
-                                if (message.licenseInfo) {
-                                    updateLicenseStatus(message.licenseInfo);
-                                } else {
-                                    updateLicenseStatus(null); // Pass null for no license
-                                }
-                                // --- END KEY CHANGE -
-
-
-
+                                updateLicenseStatus(message.licenseInfo); // Simplified
                                  const licenseForm = document.getElementById('licenseForm');
                                 const licenseInfoDiv = document.getElementById('licenseInfo');
                                  // NEW: Check for expired
                                 if (licenseForm && licenseInfoDiv) {
-                                     licenseForm.style.display = 
+                                     licenseForm.style.display =
                                         (message.value && (!message.licenseInfo?.valid && !message.licenseInfo?.expired) )? 'block' : 'none';
-                                    licenseInfoDiv.style.display = 
+                                    licenseInfoDiv.style.display =
                                         (message.licenseInfo?.valid || message.licenseInfo?.expired) ? 'block' : 'none';
                                 }
                                 const offlineWarning = document.getElementById('offlineWarning');
                                 if (offlineWarning) {
-                                    offlineWarning.style.display = 
+                                    offlineWarning.style.display =
                                         (!message.value && message.licenseInfo?.temporarilyDisabled) ? 'block' : 'none';
                                 }
                                 // NEW: Expired Warning Display
@@ -329,34 +285,33 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                 break;
                             case 'licenseStatus':
                                 setLoading(false);
-                                licenseState = message.value;
+                                licenseState = message.value; // Update license state
                                 updateLicenseStatus(message.value);
                                 break;
                             case 'featureResult':
                                 showResult(message.feature, message.result);
                                 break;
-                            case 'error':
+                            case 'featureError': // Use distinct type for feature errors
+                            case 'error':       // General errors
                                 setLoading(false);
-                                // --- KEY CHANGE: Display User-Friendly Error ---
                                 showError(message.value);
-                                 // --- END KEY CHANGE ---
                                 break;
                         }
                     });
 
-                    function updateOnlineStatus(online) {
+                   function updateOnlineStatus(online) {
                         isOnline = online;
                         const statusElement = document.getElementById('connectionStatus');
                         statusElement.textContent = \`Online Status: \${online ? 'Connected' : 'Offline'}\`;
                         statusElement.style.color = online ? 'var(--vscode-terminal-ansiGreen)' : 'var(--vscode-terminal-ansiRed)';
                     }
 
-                   // --- KEY CHANGE: Handle null licenseInfo ---
-                   function updateLicenseStatus(licenseInfo) {
+                    function updateLicenseStatus(licenseInfo) {
                         const statusElement = document.getElementById('licenseStatus');
                         const licenseDetails = document.getElementById('licenseDetails');
                         const licenseForm = document.getElementById('licenseForm');
                         const licenseInfoDiv = document.getElementById('licenseInfo');
+
 
                         if (!licenseInfo) {
                             // No license key present
@@ -367,7 +322,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             return; // Exit early
                         }
 
-                        licenseState = licenseInfo; // Update licenseState even if it is expired or temporarily disabled
+                        licenseState = licenseInfo; // Update the licenseState.
 
                         if (licenseInfo.valid && !licenseInfo.temporarilyDisabled && !licenseInfo.expired) {
                             statusElement.textContent = \`License Status: \${licenseInfo.status || 'Active'}\`;
@@ -401,19 +356,19 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             \`;
                         }
                     }
-                    // --- END KEY CHANGE ---
+
 
 
                     function showResult(feature, result) {
-                        const resultDiv = document.createElement('div');
+                         const resultDiv = document.createElement('div');
                         resultDiv.className = 'feature-result';
                         resultDiv.textContent = result;
-                        
+
                         const oldResult = document.querySelector('.feature-result');
                         if (oldResult) {
                             oldResult.remove();
                         }
-                        
+
                         const button = document.querySelector(\`button[onclick*="\${feature}"]\`);
                         if (button) {
                             button.parentNode.insertBefore(resultDiv, button.nextSibling);
@@ -446,4 +401,3 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         `;
     }
 }
-

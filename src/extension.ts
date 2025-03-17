@@ -1,38 +1,21 @@
+// src/extension.ts
 import * as vscode from 'vscode';
 import { SidebarProvider } from './webview/sidebarProvider';
 import { LicenseService } from './services/licenseService';
 
 export function activate(context: vscode.ExtensionContext) {
-	// Initialize services
 	const licenseService = new LicenseService(context);
-
-	// Initialize sidebar provider
-	const sidebarProvider = new SidebarProvider(context.extensionUri, licenseService);
-
-	// Register the sidebar webview
-	const sidebarView = vscode.window.registerWebviewViewProvider(
-		"textToolsProSidebar",
-		sidebarProvider
-	);
-
-	// Start license service and online checking
 	licenseService.initialize();
 
-	// Register the show toolbar command
-	const showToolbarCommand = vscode.commands.registerCommand('textToolsPro.showToolbar', () => {
-		vscode.commands.executeCommand('workbench.view.extension.text-tools-pro');
-	});
+	const sidebarProvider = new SidebarProvider(context.extensionUri, licenseService);
 
-	// Add to subscriptions
 	context.subscriptions.push(
-		sidebarView,
-		showToolbarCommand,
-		licenseService
+		vscode.window.registerWebviewViewProvider("textToolsProSidebar", sidebarProvider),
+		vscode.commands.registerCommand('textToolsPro.showToolbar', () => {
+			vscode.commands.executeCommand('workbench.view.extension.text-tools-pro');
+		}),
+		licenseService // Important: Keep licenseService in subscriptions for disposal
 	);
-
-
 }
 
-export function deactivate() {
-	// Cleanup if needed
-}
+export function deactivate() { }

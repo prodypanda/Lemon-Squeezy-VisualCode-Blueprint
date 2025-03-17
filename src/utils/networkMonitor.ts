@@ -1,10 +1,9 @@
+// src/utils/networkMonitor.ts
 import { ApiService } from '../services/apiService';
 import { CONFIG } from '../config';
 import { EventEmitter } from 'events';
 
 export class NetworkMonitor extends EventEmitter {
-    private isOnline: boolean = true;
-    private lastOnlineTime: number = Date.now();
     private checkInterval: NodeJS.Timer;
 
     constructor() {
@@ -16,30 +15,12 @@ export class NetworkMonitor extends EventEmitter {
     }
 
     private async checkConnection(): Promise<void> {
-        const wasOnline = this.isOnline;
-        this.isOnline = await ApiService.ping();
-
-        if (this.isOnline) {
-            this.lastOnlineTime = Date.now();
-        }
-
-        if (wasOnline !== this.isOnline) {
-            this.emit('statusChange', this.isOnline);
-        }
-
-        if (!this.isOnline) {
-            const offlineDuration = Date.now() - this.lastOnlineTime;
-            if (offlineDuration > CONFIG.TIMING.OFFLINE_DURATION_LIMIT) {
-                this.emit('offlineLimitExceeded');
-            }
-        }
+        const isOnline = await ApiService.ping();
+        this.emit('statusChange', isOnline); // Emit only when status changes
     }
 
-    public getStatus(): { isOnline: boolean; lastOnlineTime: number } {
-        return {
-            isOnline: this.isOnline,
-            lastOnlineTime: this.lastOnlineTime
-        };
+    public async getStatus(): Promise<boolean> {
+        return await ApiService.ping();
     }
 
     public dispose(): void {
