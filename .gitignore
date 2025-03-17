@@ -5,3 +5,5 @@ node_modules
 *.vsix
 .github/copilot-instructions.md
 informations.md
+informations2.md
+informations3.md
