@@ -139,7 +139,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         margin-bottom: 5px;
                     }
                     .status-section {
-                        position: fixed;
+                        position: sticky;
                         bottom: 0;
                         left: 0;
                         right: 0;
