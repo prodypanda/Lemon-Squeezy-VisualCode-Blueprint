@@ -71,7 +71,7 @@ lemonsqueezy-visualcode-blueprint/
 1.  **Clone the Repository:**
 
     ```bash
-    git clone https://github.com/YOUR_GITHUB_USERNAME/lemonsqueezy-visualcode-blueprint.git
+    git clone https://github.com/prodypanda/lemonsqueezy-visualcode-blueprint.git
     cd lemonsqueezy-visualcode-blueprint
     ```
 
