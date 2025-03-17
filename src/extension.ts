@@ -31,7 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 
 	// Show welcome message
-	vscode.window.showInformationMessage('Text Tools Pro is now active!');
+	//vscode.window.showInformationMessage('Text Tools Pro is now active!');
 }
 
 export function deactivate() {
