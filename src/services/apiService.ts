@@ -28,7 +28,14 @@ export class ApiService {
             );
             return response.data;
         } catch (error) {
-            throw this.handleApiError(error);
+            // --- KEY CHANGE: Return API error message for 400/404 ---
+            if (axios.isAxiosError(error) && error.response &&
+                (error.response.status === 400 || error.response.status === 404)) {
+                return error.response.data as LicenseResponse; // Return API response
+            } else {
+                throw error; // Re-throw other errors
+            }
+            // --- END KEY CHANGE ---
         }
     }
 

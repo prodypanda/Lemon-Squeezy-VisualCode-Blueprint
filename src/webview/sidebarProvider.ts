@@ -52,10 +52,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         const licenseInfo = await this.licenseService.activateLicense(data.value);
                         webviewView.webview.postMessage({ type: 'licenseStatus', value: licenseInfo });
                     } catch (error) {
-                        webviewView.webview.postMessage({
-                            type: 'error',
-                            value: error instanceof Error ? error.message : 'An unknown error occurred'
-                        });
+                        // --- KEY CHANGE: Display User-Friendly Error ---
+                        let errorMessage = 'An unknown error occurred during activation.';
+                        if (error instanceof Error) {
+                            errorMessage = error.message;
+                        }
+                        webviewView.webview.postMessage({ type: 'error', value: errorMessage });
+                        // --- END KEY CHANGE ---
                     }
                     break;
 
@@ -67,10 +70,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             value: { valid: false }
                         });
                     } catch (error) {
-                        webviewView.webview.postMessage({
-                            type: 'error',
-                            value: error instanceof Error ? error.message : 'An unknown error occurred'
-                        });
+                        // --- KEY CHANGE: Display User-Friendly Error ---
+                        let errorMessage = 'An unknown error occurred during deactivation.';
+                        if (error instanceof Error) {
+                            errorMessage = error.message;
+                        }
+                        webviewView.webview.postMessage({ type: 'error', value: errorMessage });
+                        // --- END KEY CHANGE ---
                     }
                     break;
 
@@ -78,10 +84,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     try {
                         await this._executeFeature(data.feature);
                     } catch (error) {
-                        webviewView.webview.postMessage({
-                            type: 'error',
-                            value: error instanceof Error ? error.message : 'An unknown error occurred'
-                        });
+                        // --- KEY CHANGE: Display User-Friendly Error ---
+                        let errorMessage = 'An unknown error occurred.';
+                        if (error instanceof Error) {
+                            errorMessage = error.message;
+                        }
+                        webviewView.webview.postMessage({ type: 'error', value: errorMessage });
+                        // --- END KEY CHANGE ---
                     }
                     break;
             }
@@ -246,6 +255,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             setLoading(false); // Stop loading
                             return; // Exit the function
                         }
+
                         vscode.postMessage({
                             type: 'activateLicense',
                             value: licenseKey
@@ -297,9 +307,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
 
 
-                                if (message.licenseInfo) {
-                                    updateLicenseStatus(message.licenseInfo);
-                                }
                                  const licenseForm = document.getElementById('licenseForm');
                                 const licenseInfoDiv = document.getElementById('licenseInfo');
                                  // NEW: Check for expired
@@ -330,7 +337,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                 break;
                             case 'error':
                                 setLoading(false);
+                                // --- KEY CHANGE: Display User-Friendly Error ---
                                 showError(message.value);
+                                 // --- END KEY CHANGE ---
                                 break;
                         }
                     });
