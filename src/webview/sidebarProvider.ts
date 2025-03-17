@@ -230,10 +230,22 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         'base64Decode'
                     ];
 
+                    // --- KEY CHANGE: License Key Validation ---
+                    function isValidLicenseKey(key) {
+                        const pattern = /^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}$/i;
+                        return pattern.test(key);
+                    }
+
                     function activateLicense() {
                         setLoading(true);
                         clearError();
                         const licenseKey = document.getElementById('licenseKey').value;
+                        // Validate the license key format
+                        if (!isValidLicenseKey(licenseKey)) {
+                            showError('Invalid license key format.');
+                            setLoading(false); // Stop loading
+                            return; // Exit the function
+                        }
                         vscode.postMessage({
                             type: 'activateLicense',
                             value: licenseKey
