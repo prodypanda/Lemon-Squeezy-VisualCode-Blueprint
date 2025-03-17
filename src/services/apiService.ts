@@ -1,3 +1,5 @@
+// File: src/services/apiService.ts
+
 import axios from 'axios';
 import { CONFIG } from '../config';
 import { LicenseResponse } from '../types';
@@ -38,8 +40,15 @@ export class ApiService {
                 { headers: this.headers }
             );
             return response.data;
+
         } catch (error) {
-            throw this.handleApiError(error);
+            // Handle 400 AND 404 Errors - return the response data
+            if (axios.isAxiosError(error) && error.response &&
+                (error.response.status === 400 || error.response.status === 404)) {
+                return error.response.data as LicenseResponse;
+            } else {
+                throw error; // Re-throw other errors
+            }
         }
     }
 
@@ -58,8 +67,8 @@ export class ApiService {
 
     private static handleApiError(error: any): Error {
         if (axios.isAxiosError(error)) {
-            const message = error.response?.data?.error || error.message;
-            return new Error(`API Error: ${message}`);
+            // --- KEY CHANGE: Re-throw the original Axios error ---
+            throw error; //  Re-throw the original Axios error.
         }
         return new Error('Unknown API error occurred');
     }

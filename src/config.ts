@@ -1,3 +1,5 @@
+// File: src/config.ts
+
 import { ExtensionConfig } from './types/extensionConfig';
 
 export const CONFIG = {
@@ -12,7 +14,7 @@ export const CONFIG = {
     },
 
     TIMING: {
-        ONLINE_PING_INTERVAL: 5000,  // 5 seconds as specified in informations.md
+        ONLINE_PING_INTERVAL: 5000,  // 5 seconds
         OFFLINE_DURATION_LIMIT: process.env.NODE_ENV === 'production'
             ? 7 * 24 * 60 * 60 * 1000  // 7 days in production
             : 30 * 1000                 // 30 seconds in development
@@ -50,12 +52,12 @@ export interface LicenseInfo {
     activationLimit?: number;
     activationUsage?: number;
     temporarilyDisabled?: boolean;
+    expired?: boolean; // NEW: Add expired property
     createdAt?: string;
     productName?: string;
     customerName?: string;
     customerEmail?: string;
 }
-
 export const DEFAULT_CONFIG: ExtensionConfig = {
     offlineDurationLimit: process.env.NODE_ENV === 'production'
         ? 7 * 24 * 60 * 60 * 1000  // 7 days

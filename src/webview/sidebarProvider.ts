@@ -1,8 +1,10 @@
+// File: src/webview/sidebarProvider.ts
 import * as vscode from 'vscode';
 import { FreeFeatures } from '../features/freeFeatures';
 import { PremiumFeatures } from '../features/premiumFeatures';
 import { LicenseService } from '../services/licenseService';
 import { FeatureManager } from '../features/featureManager';
+import { LicenseInfo } from '../config';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
@@ -13,8 +15,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         licenseService: LicenseService
     ) {
         this.licenseService = licenseService;
-        // Subscribe to online status changes
         this.licenseService.onOnlineStatusChange((isOnline, licenseInfo) => {
+
             this._view?.webview.postMessage({
                 type: 'onlineStatus',
                 value: isOnline,
@@ -35,6 +37,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         };
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+
+        // --- KEY CHANGE: Initial Status Update ---
+        webviewView.webview.postMessage({
+            type: 'initialStatus',
+            value: { isOnline: false, licenseInfo: null } // Send initial state
+        });
+        // --- END KEY CHANGE ---
 
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.type) {
@@ -78,7 +87,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             }
         });
     }
-
     private async _executeFeature(feature: string) {
         const isPremiumEnabled = await this.licenseService.isPremiumEnabled();
         const result = await FeatureManager.executeFeature(feature, isPremiumEnabled);
@@ -91,11 +99,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {
+
         return `
             <!DOCTYPE html>
             <html lang="en">
             <head>
                 <meta charset="UTF-8">
+                <!-- KEY CHANGE: Add CSP meta tag -->
+
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Text Tools Pro</title>
                 <style>
@@ -132,7 +143,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     .license-info { margin: 10px 0; padding: 10px; background: var(--vscode-editor-background); }
                     .license-info>h4 { margin: 0px 0px; }
                     .error { color: var(--vscode-errorForeground); margin: 5px 0; }
-                    .offline-warning {
+                    .offline-warning, .expired-warning {
                         background: var(--vscode-errorBackground);
                         color: var(--vscode-errorForeground);
                         padding: 8px;
@@ -154,7 +165,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             </head>
             <body>
                 <div id="offlineWarning" class="offline-warning" style="display: none">
-                    Premium features are temporarily disabled due to offline duration limit
+                    Premium features are temporarily disabled due to offline duration limit.
+                </div>
+                <!-- NEW: Expired Warning -->
+                <div id="expiredWarning" class="expired-warning" style="display: none">
+                    Your license has expired. Please renew to continue using premium features.
                 </div>
 
                 <div class="license-section" id="licenseSection">
@@ -205,10 +220,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
                 <script>
                     const vscode = acquireVsCodeApi();
-                    let licenseState = { valid: false, temporarilyDisabled: false };
+                    let licenseState = { valid: false, temporarilyDisabled: false, expired: false }; // NEW: Include expired
                     let isOnline = false;
 
-                    // Define premium features list
                     const premiumFeatures = [
                         'toUpperCase',
                         'toLowerCase',
@@ -234,16 +248,19 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         });
                     }
 
-                    function executeFeature(feature) {
+                   function executeFeature(feature) {
                         if (premiumFeatures.includes(feature)) {
-                            if (!licenseState.valid || licenseState.temporarilyDisabled) {
-                                showError(licenseState.temporarilyDisabled ? 
-                                    'Premium features are temporarily disabled due to offline duration limit' : 
-                                    'Premium license required for this feature');
+                            // NEW: Check for expired
+                            if (!licenseState.valid || licenseState.temporarilyDisabled || licenseState.expired) {
+                                showError(
+                                    licenseState.temporarilyDisabled
+                                        ? 'Premium features are temporarily disabled due to offline duration limit.'
+                                        : (licenseState.expired ? 'Your license has expired. Please renew to continue using premium features.' : 'Premium license required for this feature.')
+                                );
                                 return;
                             }
                         }
-                        
+
                         clearError();
                         vscode.postMessage({
                             type: 'executeFeature',
@@ -251,27 +268,44 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         });
                     }
 
+
                     window.addEventListener('message', event => {
                         const message = event.data;
                         switch (message.type) {
                             case 'onlineStatus':
                                 updateOnlineStatus(message.value);
+
+                                // --- KEY CHANGE: Handle null licenseInfo ---
+                                if (message.licenseInfo) {
+                                    updateLicenseStatus(message.licenseInfo);
+                                } else {
+                                    updateLicenseStatus(null); // Pass null for no license
+                                }
+                                // --- END KEY CHANGE -
+
+
+
                                 if (message.licenseInfo) {
                                     updateLicenseStatus(message.licenseInfo);
                                 }
-                                const licenseForm = document.getElementById('licenseForm');
+                                 const licenseForm = document.getElementById('licenseForm');
                                 const licenseInfoDiv = document.getElementById('licenseInfo');
+                                 // NEW: Check for expired
                                 if (licenseForm && licenseInfoDiv) {
-                                    // Only show license form if we're online and no valid license exists
-                                    licenseForm.style.display = 
-                                        (message.value && !message.licenseInfo?.valid) ? 'block' : 'none';
+                                     licenseForm.style.display = 
+                                        (message.value && (!message.licenseInfo?.valid && !message.licenseInfo?.expired) )? 'block' : 'none';
                                     licenseInfoDiv.style.display = 
-                                        message.licenseInfo?.valid ? 'block' : 'none';
+                                        (message.licenseInfo?.valid || message.licenseInfo?.expired) ? 'block' : 'none';
                                 }
                                 const offlineWarning = document.getElementById('offlineWarning');
                                 if (offlineWarning) {
                                     offlineWarning.style.display = 
                                         (!message.value && message.licenseInfo?.temporarilyDisabled) ? 'block' : 'none';
+                                }
+                                // NEW: Expired Warning Display
+                                const expiredWarning = document.getElementById('expiredWarning');
+                                 if (expiredWarning) {
+                                    expiredWarning.style.display = message.licenseInfo?.expired ? 'block' : 'none';
                                 }
                                 break;
                             case 'licenseStatus':
@@ -296,36 +330,45 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         statusElement.style.color = online ? 'var(--vscode-terminal-ansiGreen)' : 'var(--vscode-terminal-ansiRed)';
                     }
 
-                    function updateLicenseStatus(licenseInfo) {
-                        licenseState = licenseInfo;
+                   // --- KEY CHANGE: Handle null licenseInfo ---
+                   function updateLicenseStatus(licenseInfo) {
                         const statusElement = document.getElementById('licenseStatus');
                         const licenseDetails = document.getElementById('licenseDetails');
                         const licenseForm = document.getElementById('licenseForm');
                         const licenseInfoDiv = document.getElementById('licenseInfo');
 
-                        if (licenseInfo.valid && !licenseInfo.temporarilyDisabled) {
+                        if (!licenseInfo) {
+                            // No license key present
+                            statusElement.textContent = 'License Status: Not Activated';
+                            licenseForm.style.display = isOnline ? 'block' : 'none'; // Show form if online
+                            licenseInfoDiv.style.display = 'none';
+                            document.querySelectorAll('.premium').forEach(btn => btn.disabled = true); // Disable premium
+                            return; // Exit early
+                        }
+
+                        licenseState = licenseInfo; // Update licenseState even if it is expired or temporarily disabled
+
+                        if (licenseInfo.valid && !licenseInfo.temporarilyDisabled && !licenseInfo.expired) {
                             statusElement.textContent = \`License Status: \${licenseInfo.status || 'Active'}\`;
                             document.querySelectorAll('.premium').forEach(btn => btn.disabled = false);
+                        } else if (licenseInfo.expired) {
+                            statusElement.textContent = 'License Status: Expired';
+                            document.querySelectorAll('.premium').forEach(btn => btn.disabled = true);
                         } else {
-                            // Handle expired status specifically
-                            if(licenseInfo.status === 'expired'){
-                                statusElement.textContent = 'License Status: Expired';
-                            } else if(licenseInfo.temporarilyDisabled){
-                                statusElement.textContent = 'License Status: Temporarily Disabled';
-                            }
-                            else{
-                                statusElement.textContent = 'License Status: Invalid';
-                            }
+                            statusElement.textContent = licenseInfo.temporarilyDisabled ?
+                                'License Status: Temporarily Disabled' :
+                                'License Status: Invalid';
                             document.querySelectorAll('.premium').forEach(btn => btn.disabled = true);
                         }
 
-                        // Update form visibility based on license status and online status
-                        licenseForm.style.display = (isOnline && !licenseInfo.valid) ? 'block' : 'none';
-                        licenseInfoDiv.style.display = licenseInfo.valid ? 'block' : 'none';
+                        // Only show license details if valid OR expired (not temporarily disabled)
+                        licenseForm.style.display = (isOnline && !licenseInfo.valid && !licenseInfo.expired) ? 'block' : 'none';
+                        licenseInfoDiv.style.display = (licenseInfo.valid || licenseInfo.expired) ? 'block' : 'none';
 
-                        if (licenseInfo.valid) {
+
+                        if (licenseInfo.valid || licenseInfo.expired) {
                             licenseDetails.innerHTML = \`
-                                <p>Status: \${licenseInfo.temporarilyDisabled ? 'Temporarily Disabled' : licenseInfo.status || 'Active'}</p>
+                                <p>Status: \${licenseInfo.expired ? 'Expired' : (licenseInfo.temporarilyDisabled ? 'Temporarily Disabled' : licenseInfo.status || 'Active')}</p>
                                 <p>Product Name: \${licenseInfo.productName || 'N/A'}</p>
                                 <p>Customer Name: \${licenseInfo.customerName || 'N/A'}</p>
                                 <p>Customer Email: \${licenseInfo.customerEmail || 'N/A'}</p>
@@ -336,24 +379,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                 <p>Expires: \${licenseInfo.expiresAt ? new Date(licenseInfo.expiresAt).toLocaleDateString() : 'Never'}</p>
                             \`;
                         }
-                        // Display expiration details if expired
-                        else if (licenseInfo.status === 'expired') {
-                            licenseDetails.innerHTML = \`
-                            <p>Status: Expired</p>
-                            <p>Product Name: \${licenseInfo.productName || 'N/A'}</p>
-                            <p>Customer Name: \${licenseInfo.customerName || 'N/A'}</p>
-                            <p>Customer Email: \${licenseInfo.customerEmail || 'N/A'}</p>
-                            <p>License Key: \${licenseInfo.licenseKey || 'N/A'}</p>
-                            <p>Instance Name: \${licenseInfo.instanceName || 'N/A'}</p>
-                            <p>Activation Usage: \${licenseInfo.activationUsage || 0} / \${licenseInfo.activationLimit || 'Unlimited'}</p>
-                            <p>Created At: \${new Date(licenseInfo.createdAt).toLocaleDateString() || 'N/A'}</p>
-                            <p>Expired At: \${licenseInfo.expiresAt ? new Date(licenseInfo.expiresAt).toLocaleDateString() : 'Never'}</p>
-                            <p>Please renew your license.</p>
-                        \`;
-
-                        licenseInfoDiv.style.display = 'block'; // Show the license info even if it's expired
-                        }
                     }
+                    // --- END KEY CHANGE ---
+
 
                     function showResult(feature, result) {
                         const resultDiv = document.createElement('div');
@@ -397,3 +425,4 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         `;
     }
 }
+
