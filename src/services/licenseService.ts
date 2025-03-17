@@ -127,6 +127,12 @@ export class LicenseService {
             const response = await ApiService.activateLicense(licenseKey, instanceName);
 
             if (response.activated && response.instance?.id) {
+
+                // --- KEY CHANGE: Validate Store and Product ID ---
+                if (response.meta.store_id !== CONFIG.STORE_ID || response.meta.product_id !== CONFIG.PRODUCT_ID) {
+                    throw new Error("This license key is not valid for this product.");
+                }
+
                 await this.storeLicenseInfo(licenseKey, response.instance.id);
                 this.isExpired = false;
                 await this.context.globalState.update('isExpired', false);
